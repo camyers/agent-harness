@@ -51,6 +51,7 @@ def run(task: str) -> str:
                 "run_id": run_id,
                 "event": "usage",
                 "step": step + 1,
+                "model": result.model,
                 "prompt_tokens": result.prompt_tokens,
                 "completion_tokens": result.completion_tokens,
                 "latency_ms": result.latency_ms,
