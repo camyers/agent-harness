@@ -2,12 +2,15 @@ import json
 import sys
 import time
 
-from backend import chat
+from backend import get_provider
 from guardrails import NEEDS_APPROVAL, check, log
 from tools import REGISTRY, TOOLS
 
 MAX_STEPS = 10
 SYSTEM_PROMPT = "You are a coding assistant. When a task needs a tool, call the tool right away. Do not announce what you are about to do, and never ask the user for permission in your reply. The harness asks for approval by itself."
+
+provider = get_provider()
+
 
 def approve(name: str, args: dict) -> bool:
     print(f"\nThe model wants to use {name}:")
@@ -35,12 +38,28 @@ def run(task: str) -> str:
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
     ]
+    total_tokens = 0
+    total_latency_ms = 0
 
     for step in range(MAX_STEPS):
-        message = chat(messages, tools=TOOLS)
+        result = provider.complete(messages, tools=TOOLS)
+        message = result.message
+        total_tokens += result.prompt_tokens + result.completion_tokens
+        total_latency_ms += result.latency_ms
+        log(
+            {
+                "run_id": run_id,
+                "event": "usage",
+                "step": step + 1,
+                "prompt_tokens": result.prompt_tokens,
+                "completion_tokens": result.completion_tokens,
+                "latency_ms": result.latency_ms,
+            }
+        )
 
         if not message.tool_calls:
             log({"run_id": run_id, "event": "answer", "content": message.content})
+            print(f"\n{result.model}: {total_tokens} tokens, {total_latency_ms}ms total")
             return message.content
 
         messages.append(
@@ -65,9 +84,9 @@ def run(task: str) -> str:
             name = call.function.name
             try:
                 args = json.loads(call.function.arguments)
-                outcome, result = execute(name, args)
+                outcome, result_text = execute(name, args)
             except Exception as error:
-                args, outcome, result = call.function.arguments, "error", f"error: {error}"
+                args, outcome, result_text = call.function.arguments, "error", f"error: {error}"
             print(f"[{step + 1}] {name} {call.function.arguments} -> {outcome}")
             log(
                 {
@@ -77,11 +96,11 @@ def run(task: str) -> str:
                     "tool": name,
                     "args": args,
                     "outcome": outcome,
-                    "result": result[:500],
+                    "result": result_text[:500],
                 }
             )
             messages.append(
-                {"role": "tool", "tool_call_id": call.id, "content": result}
+                {"role": "tool", "tool_call_id": call.id, "content": result_text}
             )
 
     log({"run_id": run_id, "event": "stopped", "reason": "step limit"})
