@@ -3,10 +3,12 @@ import time
 from typing import Protocol
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 load_dotenv()
 
+class ToolCallRejected(Exception):
+    """The provider refused a malformed tool call before the harness saw it."""
 
 class Completion:
     """One reply from a provider, with what it cost to get it."""
@@ -37,7 +39,13 @@ class GroqProvider:
             kwargs["tools"] = tools
 
         start = time.perf_counter()
-        response = self.client.chat.completions.create(**kwargs)
+        try:
+            response = self.client.chat.completions.create(**kwargs)
+        except BadRequestError as error:
+            if error.code != "tool_use_failed":
+                raise
+            body = error.body if isinstance(error.body, dict) else {}
+            raise ToolCallRejected(body.get("failed_generation", str(error))) from error
         latency_ms = round((time.perf_counter() - start) * 1000)
 
         return Completion(

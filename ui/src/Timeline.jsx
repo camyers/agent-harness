@@ -69,6 +69,33 @@ function Event({ event }) {
       </Row>
     )
   }
+  if (event.event === 'context') {
+    return (
+      <Row time={time} kind="task" title="Test output given to the model">
+        <details>
+          <summary>Show log</summary>
+          <pre>{event.text}</pre>
+        </details>
+      </Row>
+    )
+  }
+  if (event.event === 'rejected') {
+    return (
+      <Row time={time} kind="blocked" title={`Step ${event.step}: tool call rejected by the provider`}>
+        <code>{event.generation}</code>
+      </Row>
+    )
+  }
+  if (event.event === 'verify') {
+    return (
+      <Row time={time} kind={event.passed ? 'ok' : 'error'} title={event.passed ? 'Tests pass' : 'Tests still fail'}>
+        <details>
+          <summary>Test output</summary>
+          <pre>{event.output}</pre>
+        </details>
+      </Row>
+    )
+  }
   return (
     <Row time={time} kind="other" title={event.event}>
       <pre>{JSON.stringify(event, null, 2)}</pre>

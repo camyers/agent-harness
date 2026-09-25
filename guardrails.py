@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 LOG_FILE = ROOT / "runs.jsonl"
 
-NEEDS_APPROVAL = {"run_shell", "write_file"}
+NEEDS_APPROVAL = {"run_shell", "write_file", "replace_in_file"}
 OFF_LIMITS = {".env", ".git"}
 ALLOWED_COMMANDS = {
     "dir",
@@ -15,11 +15,30 @@ ALLOWED_COMMANDS = {
     "git log --oneline",
     "git diff",
     "git branch",
+    "python -m unittest discover -s examples/shop",
 }
 
+def check_edit(args: dict) -> str | None:
+    path = args.get("path", "")
+    problem = check_path(path)
+    if problem:
+        return problem
+    if Path(path).name.startswith("test_"):
+        return "test files are read-only. Fix the source code, not the test"
+    text = (ROOT / path).read_text(encoding="utf-8")
+    count = text.count(args.get("old", ""))
+    if count == 0:
+        return "old text not found. Read the file again and copy the lines exactly"
+    if count > 1:
+        return f"old text appears {count} times. Include more surrounding lines so it matches once"
+    return None
 
 def check(name: str, args: dict) -> str | None:
     """Return the reason a call is refused, or None if it can go ahead."""
+    if name in ("read_file", "list_dir", "write_file"):
+        return check_path(args.get("path", "."))
+    if name == "replace_in_file":
+        return check_edit(args)
     if name in ("read_file", "list_dir", "write_file"):
         return check_path(args.get("path", "."))
     if name == "run_shell":

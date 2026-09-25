@@ -23,6 +23,11 @@ def write_file(path: str, content: str) -> str:
     target.write_text(content, encoding="utf-8")
     return f"wrote {len(content)} characters to {path}"
 
+def replace_in_file(path: str, old: str, new: str) -> str:
+    target = ROOT / path
+    text = target.read_text(encoding="utf-8")
+    target.write_text(text.replace(old, new, 1), encoding="utf-8")
+    return f"replaced 1 match in {path}"
 
 def run_shell(command: str) -> str:
     result = subprocess.run(
@@ -42,6 +47,7 @@ REGISTRY = {
     "list_dir": list_dir,
     "write_file": write_file,
     "run_shell": run_shell,
+    "replace_in_file": replace_in_file,
 }
 
 TOOLS = [
@@ -85,6 +91,22 @@ TOOLS = [
                     "content": {"type": "string", "description": "The text to write."},
                 },
                 "required": ["path", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "replace_in_file",
+            "description": "Edit an existing file by replacing one exact block of text. old must appear in the file exactly once.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "File path, relative to the project folder."},
+                    "old": {"type": "string", "description": "The exact text to replace, copied from the file."},
+                    "new": {"type": "string", "description": "The text to put in its place."},
+                },
+                "required": ["path", "old", "new"],
             },
         },
     },

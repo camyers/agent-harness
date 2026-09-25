@@ -1,6 +1,10 @@
+![Agent Harness: a tool loop, guardrails, provider switching and a run viewer, built from scratch in Python. A terminal shows the harness fixing failing tests, with a blocked read of .env and an approval prompt before the edit.](docs/images/banner.png)
+
 # agent-harness
 
 A small agent harness built from scratch in Python, as a way to learn how the tool-calling loop and its guardrails actually work. It talks to models through Groq's free, OpenAI-compatible API, so you can follow along without paying for anything.
+
+![The React run viewer replaying a build doctor run: the task, token and timing stats, each tool call, the approved fix to cart.py and the passing tests.](docs/images/run-viewer.jpg)
 
 This is a learning project. It follows a phase-by-phase plan from an accompanying blog post, and each phase gets a git tag when it's finished so you can check out the code as it stood at that point.
 
